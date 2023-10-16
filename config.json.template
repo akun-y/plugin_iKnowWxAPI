@@ -1,3 +1,4 @@
 {
-  "groupx_host_url":"http://192.168.15.223:8988"
+  "port": 9092,
+  "groupx_pubkey":"-----BEGIN PUBLIC KEY-----\nMIGJAoGBANx8VU1LpdNyKbRdGp4lnucpHOyy6g9qtWm6OSmptUiTWy4wVWoHmhh/\nGEqjcuk+jNZdA4wjFBQYq/RRyFYtoZZg68CTWDR/TDPJWoyO+qcIBBy0BLBlZc20\nJT/fflog+dPMDA9LT565IwrXFjY9qK/AZcFnxW79LlrVq05WtSVzAgMBAAE=\n-----END PUBLIC KEY-----"
 }

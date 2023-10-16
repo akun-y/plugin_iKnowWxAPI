@@ -15,7 +15,7 @@ from plugins.plugin_iKnowWxAPI.server2 import server_run2
     desire_priority=900,
     hidden=True,
     desc="iKnowModel的微信信息处理服务API",
-    version="0.61",
+    version="0.63",
     author="akun.yunqi",
 )
 
@@ -36,11 +36,11 @@ class iKnowServerAPI(Plugin):
         self._start_listen_task(self.channel)
         
         logger.info(f"[iKnowWxAPI] inited, config={self.config}")
-
+    
     def _start_listen_task(self,channel):
         # 创建子线程
         t = threading.Thread(target=server_run2,kwargs={
-            **self.config,
+            'config':self.config,
             'channel': channel,})
         t.setDaemon(True)
         t.start()
