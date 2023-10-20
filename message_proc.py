@@ -19,6 +19,7 @@ import requests
 import io
 import time
 import gc
+from common.log import logger
 from channel import channel_factory
 
 
@@ -56,7 +57,7 @@ class MessageProc(object):
         if not os.path.exists(file_name):
             with open(file_name, "wb") as image_file:
                 image_file.write(binary_data)
-                print(f"文件保存为{file_name}")
+                logger.info(f"文件保存为{file_name}")
         else:
             logging.info('文件已经存在:'+file_name)
         return file_name

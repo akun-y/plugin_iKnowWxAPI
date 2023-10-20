@@ -14,6 +14,10 @@
 ```
 #installp https://github.com/akun-y/plugin_iKnowWxAPI.git
 
+* 注意:缺少模块是,可手动安装,如:
+pip install numpy -i https://pypi.tuna.tsinghua.edu.cn/simple
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+
 ```
 3 查看插件安装结果
 ```

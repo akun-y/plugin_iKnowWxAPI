@@ -84,10 +84,10 @@ async def handle_send_msg(request):
     
     type = data['type'].upper()
     if type == 'IMAGE':
-        print("send image:", data['to_user_id'],len(data['msg']))
+        logger.info("send image:", data['to_user_id'],len(data['msg']))
         handle_message_process.send_wx_img_base64(data['msg'],data['to_user_id'])     
     else:
-        print("send text:", data['to_user_id'],data['msg'])
+        logger.info("send text:", data['to_user_id'],data['msg'])
         handle_message_process.send_wx_text(data['msg'],data['to_user_id'])
     
     return web.json_response(data)
@@ -107,7 +107,7 @@ def server_run2(config,channel):
         
     _config = config
     handle_message_process = MessageProc(channel)
-    print("server_run2:", config['port'])
+    logger.info("server_run2:", config['port'])
     web.run_app(app, host='0.0.0.0', port=config['port'])
 
 
