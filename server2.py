@@ -1,10 +1,13 @@
+import os
 import time
 import aiofiles
 import aiohttp
 import asyncio
 from aiohttp import web
 import arrow
+from bridge.reply import Reply, ReplyType
 from common.log import logger
+from lib import itchat
 
 from plugins.plugin_iKnowWxAPI.message_proc import MessageProc
 from plugins.plugin_iKnowWxAPI.rsa_crypto import RsaCode
@@ -41,6 +44,25 @@ def _resp_error(message,error=400):
         'message':message
     }
     return web.json_response(resp,status=error)
+# url 支持图片,视频,文件等
+async def handle_send_url(request):
+    data =await request.json()   
+    keys = {'type','user','sign','msg','filename','to_user_id'}
+
+    if not keys.issubset(data):
+        return _resp_error('参数不完整')
+    #验证签名
+    if not _rsa_verify(data['msg'], data['sign'], data['user']):
+        logger.error('handle_send_msg 签名验证失败')
+        return _resp_error('签名验证失败')
+    file_name = data.get('filename')
+    to_user_id = data['to_user_id']
+    url = data['msg']    
+    if(url.startswith('http')):
+        if handle_message_process.send_wx_url(data.get('type','IMAGE_URL'),url,  to_user_id,file_name) :
+            return _resp_ok("文件发送成功")
+    else:
+        return _resp_error('发送失败,缺少文件链接')
 #支持通过POST form-data方式上传文件
 async def handle_file(request):
     data = await request.post() 
@@ -87,10 +109,10 @@ async def handle_send_msg(request):
     
     type = data['type'].upper()
     if type == 'IMAGE':
-        logger.info("send image:", data['to_user_id'],len(data['msg']))
+        logger.info("send image:{} - {}".format(data['to_user_id'],len(data['msg'])))
         handle_message_process.send_wx_img_base64(data['msg'],data['to_user_id'])     
     else:
-        logger.info("send text:", data['to_user_id'],data['msg'])
+        logger.info("send text:{}-{}".format(data['to_user_id'],data['msg']))
         handle_message_process.send_wx_text(data['msg'],data['to_user_id'])
     
     return web.json_response(data)
@@ -112,6 +134,7 @@ async def setup():
     app.router.add_get('/wx', handle)
     app.router.add_post('/send', handle_send_msg)
     app.router.add_post('/send/file', handle_file)
+    app.router.add_post('/send/url', handle_send_url)
 
 
     server_fs = []
