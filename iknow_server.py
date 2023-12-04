@@ -32,24 +32,22 @@ class iKnowServerAPI(Plugin):
             self.port = self.config.get("port")
 
         self.channel = None
-        
+
         self._start_listen_task(self.channel)
-        
+
         logger.info(f"[iKnowWxAPI] inited, config={self.config}")
-    
-    def _start_listen_task(self,channel):
+
+    def _start_listen_task(self, channel):
         # 创建子线程
-        t = threading.Thread(target=server_run2,kwargs={
-            'config':self.config,
-            'channel': channel,})
+        t = threading.Thread(target=server_run2, kwargs={
+            'config': self.config,
+            'channel': channel, })
         t.setDaemon(True)
         t.start()
 
     def on_handle_context(self, e_context: EventContext):
-        if self.channel is None:
-            self.channel = e_context["channel"]
-            logging.debug(f"本次的channel为：{self.channel}")
-            
+        pass
+
     def get_help_text(self, **kwargs):
         help_text = "处理来自用户的消息,发送服务端用户响应消息"
         return help_text
