@@ -49,6 +49,7 @@ class MessageProc(object):
         context = Context(ContextType.TEXT, 'eventStr', content_dict)
 
         self.send_use_custom(content, ReplyType.TEXT, context)
+        itchat.set_pinned(to_user_id, True)
     def send_wx_url(self, type, url, to_user_id,file_name=''):
         keys = {'图片', '视频', '文件'}
 
@@ -64,7 +65,9 @@ class MessageProc(object):
         content_dict["isgroup"] = False
 
         content_dict["msg"] = ChatMessage(content_dict)
-
+        
+        itchat.set_pinned(to_user_id, True)
+        
         if(type == "图片"):
             context = Context(ContextType.IMAGE, url, content_dict)
             return self.send_use_custom(url, ReplyType.IMAGE_URL, context)

@@ -23,7 +23,7 @@ class iKnowServerAPI(Plugin):
     def __init__(self):
         super().__init__()
         self.handlers[Event.ON_HANDLE_CONTEXT] = self.on_handle_context
-
+        self.path = os.path.dirname(__file__)
         self.config = super().load_config()
         if not self.config:
             # 未加载到配置，使用模板中的配置
