@@ -91,7 +91,7 @@ async def handle_send_url(request):
         return _resp_error("签名验证失败")
     file_name = data.get("filename")
 
-    to_user_id = _get_real_to_user_id(data["to_user_nickname"], data["to_user_id"])
+    to_user_id = _get_real_to_user_id(data.get("to_user_nickname",None), data.get("to_user_id",None))
     url = data["msg"]
     if url.startswith("http"):
         if handle_message_process.send_wx_url(
@@ -211,13 +211,11 @@ def server_run2(config, channel):
     _config = config
     handle_message_process = MessageProc(channel)
 
-    logger.info("=====>server_run2:{}".format(config["port"]))
+    logger.warn("=====>server_run:{}".format(config["port"]))
 
-    print("1")
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(init())
-    print("2")
 
     start_aiohttp()
     time.sleep(25)
