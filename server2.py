@@ -10,11 +10,10 @@ from aiohttp import web
 from bridge.reply import Reply, ReplyType
 from common.log import logger
 from lib import itchat
+from plugins.plugin_iKnowWxAPI.find_plugins_func import PluginsFuncProc
 from plugins.plugin_iKnowWxAPI.message_proc import MessageProc
 from plugins.plugin_iKnowWxAPI.rsa_crypto import RsaCode
 
-handle_message_process = None
-_config = None
 _pubkeys = {}
 
 
@@ -62,13 +61,13 @@ def _get_real_to_user_id(to_user_nickname, to_user_id):
             return to_user_id
         itchat.get_friends(update=True)
         if "@@" in to_user_id:
-            friend = itchat.search_chatrooms(name=to_user_nickname)
+            friends = itchat.search_chatrooms(name=to_user_nickname)
         else:
-            friend = itchat.search_friends(name=to_user_nickname)
-        if friend:
-            logger.warn(f"通过重新获取用户,找到用户:{to_user_nickname}-{to_user_id}")
-            logger.warn(f"通过重新获取用户,找到用户:{friend}")
-            return friend.get("UserName")
+            friends = itchat.search_friends(name=to_user_nickname)
+        if friends and len(friends) > 0:
+            logger.warn(f"通过腾讯服务器重新获取用户,原用户:{to_user_nickname}-{to_user_id}")
+            logger.warn(f"====>找到新用户:{friends[0].get('UserName')}")
+            return friends[0].get("UserName")
     except Exception as e:
         logger.error("_get_real_to_user_id 获取用户发生意外 to_user_id,{}".format(e))
     logger.error(
@@ -91,15 +90,16 @@ async def handle_send_url(request):
         return _resp_error("签名验证失败")
     file_name = data.get("filename")
 
-    to_user_id = _get_real_to_user_id(data.get("to_user_nickname",None), data.get("to_user_id",None))
+    to_user_id = _get_real_to_user_id(
+        data.get("to_user_nickname", None), data.get("to_user_id", None)
+    )
     url = data["msg"]
     if url.startswith("http"):
         if handle_message_process.send_wx_url(
             data.get("type", "IMAGE_URL"), url, to_user_id, file_name
         ):
             return _resp_ok("文件发送成功")
-    else:
-        return _resp_error("发送失败,缺少文件链接")
+    return _resp_error("发送失败,缺少文件链接")
 
 
 # 支持通过POST form-data方式上传文件
@@ -155,13 +155,37 @@ async def handle_send_msg(request):
 
     to_user_id = _get_real_to_user_id(data["to_user_nickname"], data["to_user_id"])
 
-    type = data["type"].upper()
-    if type == "IMAGE":
+    msg_type = data["type"].upper()
+    if msg_type == "IMAGE":
         logger.info("send image:{} - {}".format(to_user_id, len(data["msg"])))
         handle_message_process.send_wx_img_base64(data["msg"], to_user_id)
     else:
         logger.info("send text:{}-{}".format(data["to_user_id"], data["msg"]))
         handle_message_process.send_wx_text(data["msg"], to_user_id)
+
+    return web.json_response(data)
+
+
+async def handle_send_plugins(request):
+    logger.info("handle_send_plugins:{}".format(request))
+    data = await request.json()
+
+    keys = {"user", "msg", "to_user_id", "to_user_nickname"}
+    if not keys.issubset(data):
+        return _resp_error("参数不完整")
+    logger.info("_rsa_verify:{}".format(data))
+    # 验证签名
+    if not _rsa_verify(data["msg"], data["sign"], data["user"]):
+        logger.error("handle_send_msg 签名验证失败")
+        return web.HTTPBadRequest(text="数据包验证失败")
+
+    to_user_id = _get_real_to_user_id(data["to_user_nickname"], data["to_user_id"])
+
+    # handle_message_process.send_wx_img_base64(data["msg"], to_user_id)
+
+    proc = PluginsFuncProc()
+    # proc.runTask(True, data["msg"])
+    proc.runTask(to_user_id, True,data["msg"])
 
     return web.json_response(data)
 
@@ -183,6 +207,7 @@ async def setup():
     app.router.add_post("/send", handle_send_msg)
     app.router.add_post("/send/file", handle_file)
     app.router.add_post("/send/url", handle_send_url)
+    app.router.add_post("/send/plugins", handle_send_plugins)
 
     server_fs = []
     single = web.AppRunner(app)
@@ -198,7 +223,7 @@ async def setup():
 
 def start_aiohttp():
     loop = asyncio.get_event_loop()
-    loop.set_debug(True)
+    loop.set_debug(False)
     srv = loop.run_until_complete(setup())
     loop.run_forever()
 
