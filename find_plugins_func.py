@@ -5,14 +5,10 @@ from bridge.reply import Reply, ReplyType
 from channel.chat_message import ChatMessage
 import logging
 from plugins import *
-from plugins.timetask.TimeTaskTool import TaskManager
-from plugins.timetask.config import conf, load_config
-from plugins.timetask.Tool import TimeTaskModel
 from lib import itchat
 from lib.itchat.content import *
 import re
 import arrow
-from plugins.timetask.Tool import ExcelTool
 from bridge.bridge import Bridge
 import config as RobotConfig
 import requests
@@ -24,9 +20,9 @@ from channel import channel_factory
 
 # 通过输入指令，确定是否有插件能够处理该指令，如有则调用并将调用结果返回。
 class PluginsFuncProc(object):
-    def __init__(self):
+    def __init__(self,_config):
         super().__init__()
-        self.conf = conf()
+        self.conf = _config
         self.channel = None
 
     # 使用默认的回复
@@ -41,7 +37,6 @@ class PluginsFuncProc(object):
     # 使用自定义回复
     def replay_use_custom(
         self,
-        model: TimeTaskModel,
         reply_text: str,
         replyType: ReplyType,
         context: Context,
@@ -62,9 +57,7 @@ class PluginsFuncProc(object):
         except Exception as e:
             if retry_cnt < 2:
                 time.sleep(3 + 3 * retry_cnt)
-                self.replay_use_custom(
-                    model, reply_text, replyType, context, retry_cnt + 1
-                )
+                self.replay_use_custom(reply_text, replyType, context, retry_cnt + 1)
 
     # 执行定时task
     def runTask(self, to_user_id, isGroup: bool, text: str):
@@ -207,12 +200,12 @@ class PluginsFuncProc(object):
                 replyType = reply.type
 
         # 原消息
-        if reply_text is None or isFindExFuc is False:
+        if reply_text is None or replyType is None:
             reply_text = eventStr
             replyType = ReplyType.TEXT
 
         # 消息回复
-        self.replay_use_custom("model", reply_text, replyType, context)
+        self.replay_use_custom(reply_text, replyType, context)
 
     # 检查前缀是否匹配
     def check_prefix(self, content, prefix_list):

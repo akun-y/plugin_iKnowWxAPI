@@ -183,7 +183,7 @@ async def handle_send_plugins(request):
 
     # handle_message_process.send_wx_img_base64(data["msg"], to_user_id)
 
-    proc = PluginsFuncProc()
+    proc = PluginsFuncProc(_config)
     # proc.runTask(True, data["msg"])
     proc.runTask(to_user_id, True,data["msg"])
 
