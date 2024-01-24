@@ -138,8 +138,6 @@ async def handle_file(request):
 
 
 # 支持通过POST json方式发送请求
-
-
 async def handle_send_msg(request):
     logger.info("handle_send_msg:{}".format(request))
     data = await request.json()
@@ -185,7 +183,7 @@ async def handle_send_plugins(request):
 
     proc = PluginsFuncProc(_config)
     # proc.runTask(True, data["msg"])
-    proc.runTask(to_user_id, True,data["msg"])
+    proc.runTask(to_user_id, True, data["msg"])
 
     return web.json_response(data)
 
