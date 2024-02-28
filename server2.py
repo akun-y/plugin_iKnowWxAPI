@@ -54,20 +54,29 @@ def _resp_error(message, error=400):
 
 
 # url 支持图片,视频,文件等
-def _get_real_to_user_id(to_user_nickname, to_user_id):
+def _get_real_to_user_id(to_user_nickname, to_user_id, end):
     try:
         friend = itchat.search_friends(userName=to_user_id)
         if friend:
-            return to_user_id
-        itchat.get_friends(update=True)
+            return friend.UserName,friend.NickName
+
         if "@@" in to_user_id:
             friends = itchat.search_chatrooms(name=to_user_nickname)
         else:
             friends = itchat.search_friends(name=to_user_nickname)
         if friends and len(friends) > 0:
-            logger.warn(f"通过腾讯服务器重新获取用户,原用户:{to_user_nickname}-{to_user_id}")
-            logger.warn(f"====>找到新用户:{friends[0].get('UserName')}")
-            return friends[0].get("UserName")
+            if len(friends) > 1:
+                logger.error("找到多个用户,请检查昵称是否唯一")
+                return None,None
+            f = friends[0]
+            logger.warn(
+                f"通过腾讯服务器重新获取用户,原用户:{to_user_nickname}-{to_user_id}"
+            )            
+            logger.warn(f"====>找到新用户:{f.get('UserName')}")
+            return f.get("UserName"),f.get("NickName")
+        elif not end:
+            itchat.get_friends(update=True)
+            return _get_real_to_user_id(to_user_nickname, to_user_id, True)
     except Exception as e:
         logger.error("_get_real_to_user_id 获取用户发生意外 to_user_id,{}".format(e))
     logger.error(
@@ -91,7 +100,9 @@ async def handle_send_url(request):
     file_name = data.get("filename")
 
     to_user_id = _get_real_to_user_id(
-        data.get("to_user_nickname", None), data.get("to_user_id", None)
+        data.get("to_user_nickname", None), 
+        data.get("to_user_id", None),
+        False
     )
     url = data["msg"]
     if url.startswith("http"):
@@ -116,7 +127,7 @@ async def handle_file(request):
         logger.error("handle_send_msg 签名验证失败")
         return _resp_error("签名验证失败")
 
-    to_user_id = _get_real_to_user_id(data["to_user_nickname"], data["to_user_id"])
+    to_user_id = _get_real_to_user_id(data["to_user_nickname"], data["to_user_id"],False)
     upload_file = data["file"]
     if upload_file and upload_file.filename:  # 检查是否上传了文件
         content_type = upload_file.content_type  # 获取上传文件的Content-Type
@@ -139,6 +150,7 @@ async def handle_file(request):
 
 # 支持通过POST json方式发送请求
 async def handle_send_msg(request):
+    logger.warn("通过POST方式发送消息(LISTEN)")
     logger.info("handle_send_msg:{}".format(request))
     data = await request.json()
 
@@ -151,7 +163,7 @@ async def handle_send_msg(request):
         logger.error("handle_send_msg 签名验证失败")
         return web.HTTPBadRequest(text="数据包验证失败")
 
-    to_user_id = _get_real_to_user_id(data["to_user_nickname"], data["to_user_id"])
+    to_user_id,to_user_nickname = _get_real_to_user_id(data["to_user_nickname"], data["to_user_id"],False)
 
     msg_type = data["type"].upper()
     if msg_type == "IMAGE":
@@ -161,7 +173,10 @@ async def handle_send_msg(request):
         logger.info("send text:{}-{}".format(data["to_user_id"], data["msg"]))
         handle_message_process.send_wx_text(data["msg"], to_user_id)
 
-    return web.json_response(data)
+    return web.json_response({
+        "actual_user_id":to_user_id,
+        "actual_user_nickname":to_user_nickname,
+        **data })
 
 
 async def handle_send_plugins(request):
@@ -177,7 +192,7 @@ async def handle_send_plugins(request):
         logger.error("handle_send_msg 签名验证失败")
         return web.HTTPBadRequest(text="数据包验证失败")
 
-    to_user_id = _get_real_to_user_id(data["to_user_nickname"], data["to_user_id"])
+    to_user_id,to_user_nickname = _get_real_to_user_id(data["to_user_nickname"], data["to_user_id"],False)
 
     # handle_message_process.send_wx_img_base64(data["msg"], to_user_id)
 
@@ -185,7 +200,10 @@ async def handle_send_plugins(request):
     # proc.runTask(True, data["msg"])
     proc.runTask(to_user_id, True, data["msg"])
 
-    return web.json_response(data)
+    return web.json_response({
+        "actual_user_id":to_user_id,
+        "actual_user_nickname":to_user_nickname,
+        **data })
 
 
 async def handle(request):
@@ -221,8 +239,9 @@ async def setup():
 
 def start_aiohttp():
     loop = asyncio.get_event_loop()
-    loop.set_debug(False)
+    loop.set_debug(True)
     srv = loop.run_until_complete(setup())
+    logger.info(f"server runing on... {srv}")
     loop.run_forever()
 
 
@@ -240,8 +259,10 @@ def server_run2(config, channel):
     asyncio.set_event_loop(loop)
     loop.run_until_complete(init())
 
-    start_aiohttp()
-    time.sleep(25)
+    while True:
+        start_aiohttp()
+        logger.error("=====>server_run:{}".format(config["port"]))
+        time.sleep(25)
     # while True:
     #     time.sleep(1.1)
 
