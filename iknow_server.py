@@ -35,7 +35,7 @@ class iKnowServerAPI(Plugin):
 
         self._start_listen_task(self.channel)
 
-        logger.info(f"[iKnowWxAPI] inited, config={self.config}")
+        logger.info(f"======>[iKnowWxAPI] inited")
 
     def _start_listen_task(self, channel):
         # 创建子线程
