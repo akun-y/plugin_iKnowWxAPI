@@ -50,9 +50,8 @@ class MessageProc(object):
         self.send_use_custom(content, ReplyType.TEXT, context)
         itchat.set_pinned(to_user_id, True)
 
- 
     def send_wx_url(self, type, url, to_user_id, file_name="x"):
-        keys = {"图片", "视频", "文件", "月图片"}
+        keys = {"图片", "视频", "文件", "月图片", "公开月图片"}
 
         if not type in keys:
             logger.error(f"不支持的URL类型{type},支持类型为: {keys}")
@@ -69,9 +68,10 @@ class MessageProc(object):
 
         itchat.set_pinned(to_user_id, True)
 
-        if type == "图片" or type == "月图片":
+        # 走代理的时候会无法发送
+        if type in ["图片", "月图片", "公开月图片"]:
             context = Context(ContextType.IMAGE, url, content_dict)
-            return self.send_use_custom(url, ReplyType.IMAGE_URL, context)            
+            return self.send_use_custom(url, ReplyType.IMAGE_URL, context)
         elif type == "视频":
             context = Context(ContextType.VIDEO, url, content_dict)
             return self.send_use_custom(url, ReplyType.VIDEO_URL, context)
@@ -172,7 +172,9 @@ class MessageProc(object):
             gc.collect()
             return True
         except Exception as e:
+            logger.error(e)
             if retry_cnt < 2:
+                logger.warn("重试发送 send_use_custom")
                 time.sleep(3 + 3 * retry_cnt)
-                # self.replay_use_custom(model, reply_text, replyType, context,retry_cnt + 1)
+                self.send_use_custom(reply_text, replyType, context, retry_cnt + 1)
             return False

@@ -89,15 +89,16 @@ def _get_real_to_user_id(to_user_nickname, to_user_id, end):
 
 async def handle_send_url(request):
     data = await request.json()
-    keys = {"type", "user", "sign", "msg", "filename", "to_user_id"}
+    keys = {"type", "user", "sign", "msg",  "to_user_id"}
 
     if not keys.issubset(data):
+        logger.error("handle_send_msg 缺少参数 {}".format(data))
         return _resp_error("参数不完整")
     # 验证签名
     if not _rsa_verify(data["msg"], data["sign"], data["user"]):
         logger.error("handle_send_msg 签名验证失败")
         return _resp_error("签名验证失败")
-    file_name = data.get("filename")
+    file_name = data.get("filename",'')
 
     to_user_id, to_user_nickname = _get_real_to_user_id(
         data.get("to_user_nickname", None), data.get("to_user_id", None), False
@@ -108,6 +109,7 @@ async def handle_send_url(request):
             data.get("type", "IMAGE_URL"), url, to_user_id, file_name
         ):
             return _resp_ok("文件发送成功")
+    logger.error("handle_send_url 链接格式错误 {}".format(url))
     return _resp_error("发送失败,缺少文件链接")
 
 
