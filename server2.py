@@ -156,7 +156,7 @@ async def handle_file(request):
 
 # 支持通过POST json方式发送请求
 async def handle_send_msg(request):
-    logger.warn("通过POST方式发送消息(LISTEN)")
+    logger.warn("通过POST方式发送消息(handle_send_msg)")
     logger.info("handle_send_msg:{}".format(request))
     data = await request.json()
 
@@ -188,12 +188,13 @@ async def handle_send_msg(request):
 
 # 发送消息给多个群
 async def handle_send_msg_groups(request):
-    logger.warn("通过POST方式发送消息(LISTEN)")
+    logger.warn("通过POST方式发送消息(handle_send_msg_groups)")
     logger.info("handle_send_msg_groups:{}".format(request))
     data = await request.json()
 
     keys = {"user", "groupObjectIds", "msg"}
     if not keys.issubset(data):
+        logger.error("handle_send_msg_groups 缺少参数 {}".format(data))
         return _resp_error("参数不完整")
     logger.info("_rsa_verify:{}".format(data))
     # 验证签名
