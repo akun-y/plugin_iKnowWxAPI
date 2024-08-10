@@ -260,7 +260,8 @@ async def handle(request):
 
 
 async def init():
-    pass
+    logger.info("server_run2 init")
+    return
 
 
 async def setup():
