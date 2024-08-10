@@ -9,10 +9,10 @@ from aiohttp import web
 
 from bridge.reply import Reply, ReplyType
 from common.log import logger
-from lib import itchat
+
 from plugins.plugin_iKnowWxAPI.find_plugins_func import PluginsFuncProc
 from plugins.plugin_iKnowWxAPI.message_proc import MessageProc
-from plugins.plugin_iKnowWxAPI.rsa_crypto import RsaCode
+from plugins.plugin_iKnowWxAPI.rsa_crypto import RsaCode, load_pubkey_file
 
 _pubkeys = {}
 
@@ -32,7 +32,10 @@ def get_pubkey(user):
     if user in _pubkeys:
         return _pubkeys[user]
 
-    _pubkeys[user] = _config.get(user + "_pubkey")
+    path = os.path.dirname(__file__)
+    pubkeyFile = os.path.join(path, user + "_pubkey.pem")
+    # _pubkeys[user] = _config.get(user + "_pubkey")
+    _pubkeys[user] = load_pubkey_file(pubkeyFile)
     return _pubkeys[user]
 
 
@@ -56,27 +59,28 @@ def _resp_error(message, error=400):
 # url 支持图片,视频,文件等
 def _get_real_to_user_id(to_user_nickname, to_user_id, end):
     try:
-        friend = itchat.search_friends(userName=to_user_id)
-        if friend:
-            return friend.UserName, friend.NickName
+        pass
+        # friend = itchat.search_friends(userName=to_user_id)
+        # if friend:
+        #     return friend.UserName, friend.NickName
 
-        if "@@" in to_user_id:
-            friends = itchat.search_chatrooms(name=to_user_nickname)
-        else:
-            friends = itchat.search_friends(name=to_user_nickname)
-        if friends and len(friends) > 0:
-            if len(friends) > 1:
-                logger.error("找到多个用户,请检查昵称是否唯一")
-                return None, None
-            f = friends[0]
-            logger.warn(
-                f"通过腾讯服务器重新获取用户,原用户:{to_user_nickname}-{to_user_id}"
-            )
-            logger.warn(f"====>找到新用户:{f.get('UserName')}")
-            return f.get("UserName"), f.get("NickName")
-        elif not end:
-            itchat.get_friends(update=True)
-            return _get_real_to_user_id(to_user_nickname, to_user_id, True)
+        # if "@@" in to_user_id:
+        #     friends = itchat.search_chatrooms(name=to_user_nickname)
+        # else:
+        #     friends = itchat.search_friends(name=to_user_nickname)
+        # if friends and len(friends) > 0:
+        #     if len(friends) > 1:
+        #         logger.error("找到多个用户,请检查昵称是否唯一")
+        #         return None, None
+        #     f = friends[0]
+        #     logger.warn(
+        #         f"通过腾讯服务器重新获取用户,原用户:{to_user_nickname}-{to_user_id}"
+        #     )
+        #     logger.warn(f"====>找到新用户:{f.get('UserName')}")
+        #     return f.get("UserName"), f.get("NickName")
+        # elif not end:
+        #     itchat.get_friends(update=True)
+        #     return _get_real_to_user_id(to_user_nickname, to_user_id, True)
     except Exception as e:
         logger.error("_get_real_to_user_id 获取用户发生意外 to_user_id,{}".format(e))
     logger.error(
@@ -89,7 +93,7 @@ def _get_real_to_user_id(to_user_nickname, to_user_id, end):
 
 async def handle_send_url(request):
     data = await request.json()
-    keys = {"type", "user", "sign", "msg",  "to_user_id"}
+    keys = {"type", "user", "sign", "msg", "to_user_id"}
 
     if not keys.issubset(data):
         logger.error("handle_send_msg 缺少参数 {}".format(data))
@@ -98,7 +102,7 @@ async def handle_send_url(request):
     if not _rsa_verify(data["msg"], data["sign"], data["user"]):
         logger.error("handle_send_msg 签名验证失败")
         return _resp_error("签名验证失败")
-    file_name = data.get("filename",'')
+    file_name = data.get("filename", "")
 
     to_user_id, to_user_nickname = _get_real_to_user_id(
         data.get("to_user_nickname", None), data.get("to_user_id", None), False
@@ -182,6 +186,47 @@ async def handle_send_msg(request):
     )
 
 
+# 发送消息给多个群
+async def handle_send_msg_groups(request):
+    logger.warn("通过POST方式发送消息(LISTEN)")
+    logger.info("handle_send_msg_groups:{}".format(request))
+    data = await request.json()
+
+    keys = {"user", "groupObjectIds", "msg"}
+    if not keys.issubset(data):
+        return _resp_error("参数不完整")
+    logger.info("_rsa_verify:{}".format(data))
+    # 验证签名
+    msgData = data["msg"]
+    if not _rsa_verify(
+        msgData["type"] + msgData["content"], data["sign"], data["user"]
+    ):
+        logger.error("handle_send_msg_groups 签名验证失败")
+        return web.HTTPBadRequest(text="数据包验证失败")
+
+    goupsIds = data["groupObjectIds"]
+    for groupId in goupsIds:
+        msg_type = data["type"].upper()
+
+        if msg_type == "WX_LINK":
+            logger.info("send text:{}-{}".format(data["msg"], groupId))
+            handle_message_process.send_wx_url("微信链接", msgData["content"], groupId)
+        elif msg_type == "IMAGE_URL":
+            logger.info("send image:{} - {}".format(groupId, len(data["msg"])))
+            # type, url, to_user_id, fil
+            handle_message_process.send_wx_url("图片", msgData["content"], groupId)
+        elif msg_type == "IMAGE":
+            logger.info("send image:{} - {}".format(groupId, len(data["msg"])))
+            handle_message_process.send_wx_img_base64(data["msg"], groupId)
+        else:
+            logger.info("send text:{}-{}".format(data["msg"], groupId))
+            handle_message_process.send_wx_text(msgData["content"], groupId)
+
+    return web.json_response(
+        {"actual_user_id": goupsIds, "actual_user_nickname": "to_user_nickname", **data}
+    )
+
+
 async def handle_send_plugins(request):
     logger.info("handle_send_plugins:{}".format(request))
     data = await request.json()
@@ -225,6 +270,7 @@ async def setup():
 
     app.router.add_get("/wx", handle)
     app.router.add_post("/send", handle_send_msg)
+    app.router.add_post("/send/groups", handle_send_msg_groups)
     app.router.add_post("/send/file", handle_file)
     app.router.add_post("/send/url", handle_send_url)
     app.router.add_post("/send/plugins", handle_send_plugins)

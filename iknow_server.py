@@ -5,20 +5,20 @@ import plugins
 from bridge.context import ContextType
 from bridge.reply import Reply, ReplyType
 from channel.chat_message import ChatMessage
-import logging
+
 from plugins import *
 from plugins.plugin_iKnowWxAPI.server2 import server_run2
+from plugins.plugin_iKnowWxAPI.sync_contracts_rooms import SyncContractsRooms
 
 
 @plugins.register(
     name="iKnowWxAPI",
     desire_priority=900,
-    hidden=True,
+    hidden=False,
     desc="iKnowModel的微信信息处理服务API",
     version="0.63",
     author="akun.yunqi",
 )
-
 class iKnowServerAPI(Plugin):
     def __init__(self):
         super().__init__()
@@ -39,9 +39,13 @@ class iKnowServerAPI(Plugin):
 
     def _start_listen_task(self, channel):
         # 创建子线程
-        t = threading.Thread(target=server_run2, kwargs={
-            'config': self.config,
-            'channel': channel, })
+        t = threading.Thread(
+            target=server_run2,
+            kwargs={
+                "config": self.config,
+                "channel": channel,
+            },
+        )
         t.setDaemon(True)
         t.start()
 
@@ -51,3 +55,7 @@ class iKnowServerAPI(Plugin):
     def get_help_text(self, **kwargs):
         help_text = "处理来自用户的消息,发送服务端用户响应消息"
         return help_text
+
+    def post_contacts_to_groupx(self, rooms, contracts):
+        SyncContractsRooms(rooms, contracts).postWxInfo2Groupx()
+        pass

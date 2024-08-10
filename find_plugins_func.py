@@ -5,8 +5,6 @@ from bridge.reply import Reply, ReplyType
 from channel.chat_message import ChatMessage
 import logging
 from plugins import *
-from lib import itchat
-from lib.itchat.content import *
 import re
 import arrow
 from bridge.bridge import Bridge

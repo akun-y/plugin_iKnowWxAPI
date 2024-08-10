@@ -8,8 +8,6 @@ from bridge.reply import Reply, ReplyType
 from channel.chat_message import ChatMessage
 import logging
 from plugins import *
-from lib import itchat
-from lib.itchat.content import *
 import re
 import arrow
 from bridge.bridge import Bridge
@@ -48,10 +46,10 @@ class MessageProc(object):
         context = Context(ContextType.TEXT, "eventStr", content_dict)
 
         self.send_use_custom(content, ReplyType.TEXT, context)
-        itchat.set_pinned(to_user_id, True)
+       # itchat.set_pinned(to_user_id, True)
 
     def send_wx_url(self, type, url, to_user_id, file_name="x"):
-        keys = {"图片", "视频", "文件", "月图片", "公开月图片"}
+        keys = {"图片", "视频", "文件", "月图片", "公开月图片","微信链接"}
 
         if not type in keys:
             logger.error(f"不支持的URL类型{type},支持类型为: {keys}")
@@ -66,12 +64,15 @@ class MessageProc(object):
 
         content_dict["msg"] = ChatMessage(content_dict)
 
-        itchat.set_pinned(to_user_id, True)
+        # itchat.set_pinned(to_user_id, True)
 
         # 走代理的时候会无法发送
         if type in ["图片", "月图片", "公开月图片"]:
             context = Context(ContextType.IMAGE, url, content_dict)
             return self.send_use_custom(url, ReplyType.IMAGE_URL, context)
+        if type in ["微信链接"]:
+            context = Context(ContextType.IMAGE, url, content_dict)
+            return self.send_use_custom(url, ReplyType.LINK, context)
         elif type == "视频":
             context = Context(ContextType.VIDEO, url, content_dict)
             return self.send_use_custom(url, ReplyType.VIDEO_URL, context)
@@ -132,7 +133,7 @@ class MessageProc(object):
 
     def send_wx_img_file(self, to_user_id, file, ext_name):
         file_name = self.save_file_to_local(file, ext_name)
-        itchat.send_image(file_name, to_user_id)
+        # itchat.send_image(file_name, to_user_id)
 
     def send_wx_img_base64(self, content, to_user_id):
         # 获取图片数据部分（去除"data:image/png;base64,"这部分）
@@ -140,11 +141,11 @@ class MessageProc(object):
         image_binary = base64.b64decode(image_data)
         file_name = self.save_metadata_to_file(image_binary, "jpg")
 
-        itchat.send_image(file_name, to_user_id)
+        # itchat.send_image(file_name, to_user_id)
 
     def send_wx_video(self, to_user_id, file, ext_name):
         file_name = self.save_file_to_local(file, ext_name)
-        itchat.send_video(file_name, to_user_id)
+        # itchat.send_video(file_name, to_user_id)
 
     # 使用默认的回复,仅支持文本
     def send_use_default(self, reply_message, e_context: EventContext):
