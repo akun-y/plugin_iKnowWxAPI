@@ -7,8 +7,9 @@ from bridge.reply import Reply, ReplyType
 from channel.chat_message import ChatMessage
 
 from plugins import *
-from plugins.plugin_iKnowWxAPI.server2 import server_run2
+from plugins.plugin_iKnowWxAPI.listen_server import listen_server
 from plugins.plugin_iKnowWxAPI.sync_contracts_rooms import SyncContractsRooms
+from plugins.plugin_iKnowWxAPI.update_ai_setting import thread_refresh_ai_config
 
 
 @plugins.register(
@@ -34,13 +35,15 @@ class iKnowServerAPI(Plugin):
         self.channel = None
 
         self._start_listen_task(self.channel)
-
+        self._start_ai_setting_refresh_task()
+        
         logger.info(f"======>[iKnowWxAPI] inited")
 
+    #启动监听服务,默认监听9092,用于发送微信消息
     def _start_listen_task(self, channel):
         # 创建子线程
         t = threading.Thread(
-            target=server_run2,
+            target=listen_server,
             kwargs={
                 "config": self.config,
                 "channel": channel,
@@ -48,7 +51,16 @@ class iKnowServerAPI(Plugin):
         )
         t.setDaemon(True)
         t.start()
-
+    #启动更新ai 配置线程,配置信息来自groupx服务器,更新后退出
+    def _start_ai_setting_refresh_task(self):
+        # 创建子线程
+        t = threading.Thread(
+            target=thread_refresh_ai_config,
+           
+        )
+        #t.setDaemon(True)
+        t.start()
+        
     def on_handle_context(self, e_context: EventContext):
         pass
 
@@ -57,5 +69,8 @@ class iKnowServerAPI(Plugin):
         return help_text
 
     def post_contacts_to_groupx(self, rooms, contracts):
+        if not self.config.get('sync_contracts'):
+            logger.warn("======>[iKnowWxAPI] 通讯录同步功能未开启")
+            return
         SyncContractsRooms(rooms, contracts).postWxInfo2Groupx()
         pass

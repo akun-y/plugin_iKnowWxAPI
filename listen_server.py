@@ -2,8 +2,6 @@ import asyncio
 import os
 import time
 
-import aiofiles
-import aiohttp
 import arrow
 from aiohttp import web
 
@@ -13,47 +11,13 @@ from common.log import logger
 from plugins.plugin_iKnowWxAPI.find_plugins_func import PluginsFuncProc
 from plugins.plugin_iKnowWxAPI.message_proc import MessageProc
 from plugins.plugin_iKnowWxAPI.rsa_crypto import RsaCode, load_pubkey_file
-
-_pubkeys = {}
-
+from plugins.plugin_iKnowWxAPI.update_ai_setting import handle_update_ai_setting
+from plugins.plugin_iKnowWxAPI.comm import _resp_error, _resp_ok, _rsa_verify
 
 async def handle(request):
     current_time = arrow.now().format("HH:mm:ss")
     return web.Response(text="iKnow Model API Server {}".format(current_time))
 
-
-# 根据用户名从配置中读取公钥
-
-
-def get_pubkey(user):
-    global _pubkeys
-    if len(user) < 1:
-        return ""
-    if user in _pubkeys:
-        return _pubkeys[user]
-
-    path = os.path.dirname(__file__)
-    pubkeyFile = os.path.join(path, user + "_pubkey.pem")
-    # _pubkeys[user] = _config.get(user + "_pubkey")
-    _pubkeys[user] = load_pubkey_file(pubkeyFile)
-    return _pubkeys[user]
-
-
-# 验证签名
-
-
-def _rsa_verify(msg, sign, user):
-    return RsaCode().verify(get_pubkey(user), msg, sign)
-
-
-def _resp_ok(message="ok"):
-    resp = {"error": 0, "message": message}
-    return web.json_response(resp)
-
-
-def _resp_error(message, error=400):
-    resp = {"error": error, "message": message}
-    return web.json_response(resp, status=error)
 
 
 # url 支持图片,视频,文件等
@@ -276,7 +240,8 @@ async def setup():
     app.router.add_post("/send/file", handle_file)
     app.router.add_post("/send/url", handle_send_url)
     app.router.add_post("/send/plugins", handle_send_plugins)
-
+    
+    app.router.add_post("/update/ai/setting",handle_update_ai_setting)
     server_fs = []
     single = web.AppRunner(app)
     await single.setup()
@@ -297,7 +262,7 @@ def start_aiohttp():
     loop.run_forever()
 
 
-def server_run2(config, channel):
+def listen_server(config, channel):
     global handle_message_process, _config
     # 延迟5秒，让初始化任务执行完
     time.sleep(5)
