@@ -62,7 +62,7 @@ class SyncContractsRooms(object):
         self.robot_name = conf().get("bot_name")
 
     def postWxInfo2Groupx(self):
-       # self.postContracts2Groupx()
+        self.postContracts2Groupx()
         self.postGroups2Groupx()
 
     def postContracts2Groupx(self):
