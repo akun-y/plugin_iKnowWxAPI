@@ -44,7 +44,7 @@ def thread_refresh_ai_config():
     while True:
         if groupx.is_login():
             res = groupx.get_ai_setting()
-            if res["code"] == 200:
+            if res and res["code"] == 200:
                 logger.info(f"获取AI 配置信息成功:{res}")
                 desc = res["data"]["description"]
                 if desc:

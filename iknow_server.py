@@ -8,7 +8,7 @@ from channel.chat_message import ChatMessage
 
 from plugins import *
 from plugins.plugin_iKnowWxAPI.listen_server import listen_server
-from plugins.plugin_iKnowWxAPI.sync_contracts_rooms import SyncContractsRooms
+from plugins.plugin_iKnowWxAPI.sync_contracts_rooms import SyncContactsRooms
 from plugins.plugin_iKnowWxAPI.update_ai_setting import thread_refresh_ai_config
 
 
@@ -72,5 +72,5 @@ class iKnowServerAPI(Plugin):
         if not self.config.get('sync_contracts'):
             logger.warn("======>[iKnowWxAPI] 通讯录同步功能未开启")
             return
-        SyncContractsRooms(rooms, contracts).postWxInfo2Groupx()
-        pass
+        return SyncContactsRooms(rooms, contracts).postWxInfo2Groupx()
+        

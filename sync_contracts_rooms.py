@@ -1,13 +1,28 @@
+import os
 import threading
+from typing import Dict, List, TypedDict
 from common.log import logger
-from config import conf
+from config import conf, get_root
 from plugins.plugin_comm.api.api_groupx import ApiGroupx
+from plugins.plugin_comm.json_file import load_json_from_file, save_json_to_file
 from plugins.plugin_comm.plugin_comm import EthZero
 
 
-class SyncContractsRooms(object):
+class GroupxContact(TypedDict):
+    account: str  # groupx 账号
+    alias: str  # 真实微信号
+    wxid: str  # wcferry 微信ID
+    name: str  # 微信昵称
+
+
+class SyncContactsRooms(object):
     def __init__(self, rooms, contracts):
         super().__init__()
+
+        self.directory = os.path.join(get_root(), "tmp")
+        self.contacts_groupx: Dict[str, GroupxContact] = (
+            load_json_from_file(self.directory, "groupx_contacts.json") or {}
+        )
         self.rooms = []
         # 使用列表推导式转换字典为列表
         for key, value in rooms.items():
@@ -65,6 +80,17 @@ class SyncContractsRooms(object):
         self.postContracts2Groupx()
         self.postGroups2Groupx()
 
+    # 保存groupx返回的用户通讯录,如本地有存在则更新,否则添加
+    def saveContractsOfGroupx(self, list: List[GroupxContact]):
+        if not list:
+            return
+        for item in list:
+            wxid = item.get("wxid")
+            if wxid:                
+                self.contacts_groupx[wxid] = item
+        # save_to_json("groupx_contacts.json",self.contacts_groupx)
+        pass
+
     def postContracts2Groupx(self):
         step = 300
         if not self.contacts or len(self.contacts) == 0:
@@ -85,6 +111,10 @@ class SyncContractsRooms(object):
             # 全部好友都发送完成了
             self.postFriendsPos = 0
             logger.info(f"好友列表发送完成,共{len(self.contacts)}个好友")
+            save_json_to_file(
+                self.directory, self.contacts_groupx, "groupx_contacts.json"
+            )
+
         else:
             # 每隔8秒执行一次,直到好友列表全部发送完成
             threading.Timer(8.0, self.postContracts2Groupx).start()
@@ -97,6 +127,8 @@ class SyncContractsRooms(object):
             return False
         else:
             logger.info(f"post friends to groupx success 用户数:{len(ret)}")
+
+        self.saveContractsOfGroupx(ret)
 
         return ret
 

@@ -14,10 +14,10 @@ from plugins.plugin_iKnowWxAPI.rsa_crypto import RsaCode, load_pubkey_file
 from plugins.plugin_iKnowWxAPI.update_ai_setting import handle_update_ai_setting
 from plugins.plugin_iKnowWxAPI.comm import _resp_error, _resp_ok, _rsa_verify
 
+
 async def handle(request):
     current_time = arrow.now().format("HH:mm:ss")
     return web.Response(text="iKnow Model API Server {}".format(current_time))
-
 
 
 # url 支持图片,视频,文件等
@@ -68,15 +68,21 @@ async def handle_send_url(request):
         return _resp_error("签名验证失败")
     file_name = data.get("filename", "")
 
-    to_user_id, to_user_nickname = _get_real_to_user_id(
-        data.get("to_user_nickname", None), data.get("to_user_id", None), False
-    )
+    to_user_id = data["to_user_id"]
+    to_user_nickname = data["to_user_nickname"]
     url = data["msg"]
     if url.startswith("http"):
         if handle_message_process.send_wx_url(
             data.get("type", "IMAGE_URL"), url, to_user_id, file_name
         ):
-            return _resp_ok("文件发送成功")
+            logger.info("handle_send_url 发送成功 {}".format(url))
+            return web.json_response(
+                {
+                    "actual_user_id": to_user_id,
+                    "actual_user_nickname": to_user_nickname,
+                    **data,
+                }
+            )
     logger.error("handle_send_url 链接格式错误 {}".format(url))
     return _resp_error("发送失败,缺少文件链接")
 
@@ -133,9 +139,8 @@ async def handle_send_msg(request):
         logger.error("handle_send_msg 签名验证失败")
         return web.HTTPBadRequest(text="数据包验证失败")
 
-    to_user_id, to_user_nickname = _get_real_to_user_id(
-        data["to_user_nickname"], data["to_user_id"], False
-    )
+    to_user_id = data["to_user_id"]
+    to_user_nickname = data["to_user_nickname"]
 
     msg_type = data["type"].upper()
     if msg_type == "IMAGE":
@@ -180,6 +185,10 @@ async def handle_send_msg_groups(request):
             logger.info("send image:{} - {}".format(groupId, len(data["msg"])))
             # type, url, to_user_id, fil
             handle_message_process.send_wx_url("图片", msgData["content"], groupId)
+        elif msg_type == "VIDEO_URL":
+            logger.info("send video:{} - {}".format(groupId, len(data["msg"])))
+            handle_message_process.send_wx_url("视频", msgData["content"], groupId)
+
         elif msg_type == "IMAGE":
             logger.info("send image:{} - {}".format(groupId, len(data["msg"])))
             handle_message_process.send_wx_img_base64(data["msg"], groupId)
@@ -240,8 +249,8 @@ async def setup():
     app.router.add_post("/send/file", handle_file)
     app.router.add_post("/send/url", handle_send_url)
     app.router.add_post("/send/plugins", handle_send_plugins)
-    
-    app.router.add_post("/update/ai/setting",handle_update_ai_setting)
+
+    app.router.add_post("/update/ai/setting", handle_update_ai_setting)
     server_fs = []
     single = web.AppRunner(app)
     await single.setup()
