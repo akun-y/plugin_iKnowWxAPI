@@ -146,6 +146,9 @@ async def handle_send_msg(request):
     if msg_type == "IMAGE":
         logger.info("send image:{} - {}".format(to_user_id, len(data["msg"])))
         handle_message_process.send_wx_img_base64(data["msg"], to_user_id)
+    elif msg_type == "WX_LINK":
+        logger.info("send text:{}-{}".format(data["msg"], to_user_id))
+        handle_message_process.send_wx_url("微信链接", data["msg"], to_user_id)
     else:
         logger.info("send text:{}-{}".format(data["to_user_id"], data["msg"]))
         handle_message_process.send_wx_text(data["msg"], to_user_id)
