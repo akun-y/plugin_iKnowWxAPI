@@ -2,18 +2,14 @@ import base64
 from hashlib import md5
 import hashlib
 import uuid
-import plugins
 from bridge.context import ContextType, Context
 from bridge.reply import Reply, ReplyType
 from channel.chat_message import ChatMessage
 import logging
 from plugins import *
-import re
-import arrow
 from bridge.bridge import Bridge
 import config as RobotConfig
 import requests
-import io
 import time
 import gc
 from common.log import logger
