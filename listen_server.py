@@ -60,11 +60,11 @@ async def handle_send_url(request):
     keys = {"type", "user", "sign", "msg", "to_user_id"}
 
     if not keys.issubset(data):
-        logger.error("handle_send_msg 缺少参数 {}".format(data))
+        logger.error("handle_send_url 缺少参数 {}".format(data))
         return _resp_error("参数不完整")
     # 验证签名
     if not _rsa_verify(data["msg"], data["sign"], data["user"]):
-        logger.error("handle_send_msg 签名验证失败")
+        logger.error("handle_send_url 签名验证失败")
         return _resp_error("签名验证失败")
     file_name = data.get("filename", "")
 
@@ -98,7 +98,7 @@ async def handle_file(request):
         return _resp_error("参数不完整")
     # 验证签名
     if not _rsa_verify(data["msg"], data["sign"], data["user"]):
-        logger.error("handle_send_msg 签名验证失败")
+        logger.error("handle_file 签名验证失败")
         return _resp_error("签名验证失败")
 
     to_user_id, to_user_nickname = _get_real_to_user_id(
@@ -214,7 +214,7 @@ async def handle_send_plugins(request):
     logger.info("_rsa_verify:{}".format(data))
     # 验证签名
     if not _rsa_verify(data["msg"], data["sign"], data["user"]):
-        logger.error("handle_send_msg 签名验证失败")
+        logger.error("handle_send_plugins 签名验证失败")
         return web.HTTPBadRequest(text="数据包验证失败")
 
     to_user_id, to_user_nickname = _get_real_to_user_id(

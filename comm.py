@@ -15,7 +15,7 @@ async def handle_update_ai_setting(request):
     logger.info("_rsa_verify:{}".format(data))
     # 验证签名
     if not _rsa_verify(data["msg"], data["sign"], data["user"]):
-        logger.error("handle_send_msg 签名验证失败")
+        logger.error("handle_update_ai_setting 签名验证失败")
         return web.HTTPBadRequest(text="数据包验证失败")
 
     return web.json_response(
