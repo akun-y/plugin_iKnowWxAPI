@@ -1,4 +1,5 @@
 # encoding:utf-8
+from channel.wcferry.wcferry_channel import WcFerryChannel
 import plugins
 from bridge.context import ContextType, Context
 from bridge.reply import Reply, ReplyType
@@ -18,10 +19,10 @@ from channel import channel_factory
 
 # 通过输入指令，确定是否有插件能够处理该指令，如有则调用并将调用结果返回。
 class PluginsFuncProc(object):
-    def __init__(self,_config):
+    def __init__(self, _config):
         super().__init__()
         self.conf = _config
-        self.channel = None
+        self.channel = WcFerryChannel()
 
     # 使用默认的回复
     def replay_use_default(self, reply_message, e_context: EventContext):
@@ -30,7 +31,9 @@ class PluginsFuncProc(object):
         reply.type = ReplyType.TEXT
         reply.content = reply_message
         e_context["reply"] = reply
-        e_context.action = EventAction.BREAK_PASS  # 事件结束，并跳过处理context的默认逻辑
+        e_context.action = (
+            EventAction.BREAK_PASS
+        )  # 事件结束，并跳过处理context的默认逻辑
 
     # 使用自定义回复
     def replay_use_custom(
@@ -57,16 +60,13 @@ class PluginsFuncProc(object):
                 time.sleep(3 + 3 * retry_cnt)
                 self.replay_use_custom(reply_text, replyType, context, retry_cnt + 1)
 
-    # 执行定时task
-    def runTask(self, to_user_id, isGroup: bool, text: str):
+    def runTask(self, to_user_id, isGroup: bool, text: str, other_dict={}):
         # 事件内容
         eventStr = text
-        # 发送的用户ID
-        other_user_id = to_user_id
         # 是否群聊
         isGroup = True
 
-        logger.info("触发了定时任务：{} , 任务详情：{}".format("taskId", eventStr))
+        logger.info("触发了插件任务：{} , 任务详情：{}".format("taskId", eventStr))
 
         # 去除多余字符串
         orgin_string = eventStr.replace("ChatMessage:", "")
@@ -77,10 +77,12 @@ class PluginsFuncProc(object):
         content_dict = {match[0]: match[1] for match in matches}
         # 替换源消息中的指令
         content_dict["content"] = eventStr
+        content_dict["ctype"] = ContextType.TEXT
         # 添加必要key
-        content_dict["receiver"] = other_user_id
-        content_dict["session_id"] = other_user_id
-        content_dict["isgroup"] = isGroup
+        content_dict["receiver"] = to_user_id
+        content_dict["session_id"] = to_user_id
+        content_dict = {**content_dict, **other_dict}
+
         msg: ChatMessage = ChatMessage(content_dict)
         # 信息映射
         for key, value in content_dict.items():
@@ -133,7 +135,9 @@ class PluginsFuncProc(object):
                     )
                 )
             except Exception as e:
-                print(f"开启了所有回复均路由，但是消息路由插件异常！后续会继续查询是否开启拓展功能。错误信息：{e}")
+                logger.error(
+                    f"开启了所有回复均路由，但是消息路由插件异常！后续会继续查询是否开启拓展功能。错误信息：{e}"
+                )
 
         # 查看配置中是否开启拓展功能
         is_open_extension_function = self.conf.get("is_open_extension_function", True)

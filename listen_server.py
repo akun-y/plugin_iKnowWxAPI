@@ -20,41 +20,6 @@ async def handle(request):
     return web.Response(text="iKnow Model API Server {}".format(current_time))
 
 
-# url 支持图片,视频,文件等
-def _get_real_to_user_id(to_user_nickname, to_user_id, end):
-    try:
-        pass
-        # friend = itchat.search_friends(userName=to_user_id)
-        # if friend:
-        #     return friend.UserName, friend.NickName
-
-        # if "@@" in to_user_id:
-        #     friends = itchat.search_chatrooms(name=to_user_nickname)
-        # else:
-        #     friends = itchat.search_friends(name=to_user_nickname)
-        # if friends and len(friends) > 0:
-        #     if len(friends) > 1:
-        #         logger.error("找到多个用户,请检查昵称是否唯一")
-        #         return None, None
-        #     f = friends[0]
-        #     logger.warn(
-        #         f"通过腾讯服务器重新获取用户,原用户:{to_user_nickname}-{to_user_id}"
-        #     )
-        #     logger.warn(f"====>找到新用户:{f.get('UserName')}")
-        #     return f.get("UserName"), f.get("NickName")
-        # elif not end:
-        #     itchat.get_friends(update=True)
-        #     return _get_real_to_user_id(to_user_nickname, to_user_id, True)
-    except Exception as e:
-        logger.error("_get_real_to_user_id 获取用户发生意外 to_user_id,{}".format(e))
-    logger.error(
-        "_get_real_to_user_id 获取用户失败 to_user_id,{},to_user_nickname,{}".format(
-            to_user_id, to_user_nickname
-        )
-    )
-    return to_user_id
-
-
 async def handle_send_url(request):
     data = await request.json()
     keys = {"type", "user", "sign", "msg", "to_user_id"}
@@ -101,9 +66,9 @@ async def handle_file(request):
         logger.error("handle_file 签名验证失败")
         return _resp_error("签名验证失败")
 
-    to_user_id, to_user_nickname = _get_real_to_user_id(
-        data["to_user_nickname"], data["to_user_id"], False
-    )
+    to_user_id = data.get("to_user_id")
+    to_user_nickname = data.get("to_user_nickname")
+
     upload_file = data["file"]
     if upload_file and upload_file.filename:  # 检查是否上传了文件
         content_type = upload_file.content_type  # 获取上传文件的Content-Type
@@ -213,22 +178,29 @@ async def handle_send_plugins(request):
         return _resp_error("参数不完整")
     logger.info("_rsa_verify:{}".format(data))
     # 验证签名
-    if not _rsa_verify(data["msg"], data["sign"], data["user"]):
-        logger.error("handle_send_plugins 签名验证失败")
-        return web.HTTPBadRequest(text="数据包验证失败")
+    # if not _rsa_verify(data["msg"], data["sign"], data["user"]):
+    #     logger.error("handle_send_plugins 签名验证失败")
+    #     return web.HTTPBadRequest(text="数据包验证失败")
 
-    to_user_id, to_user_nickname = _get_real_to_user_id(
-        data["to_user_nickname"], data["to_user_id"], False
-    )
+    to_user_id = data.get("to_user_id")
+    to_user_nickname = data.get("to_user_nickname")
+    from_user_id = data.get("from_user_id")
+    from_user_nickname = data.get("from_user_nickname")
+    actual_user_id = data.get("actual_user_id") or from_user_id
+    actual_user_nickname = data.get("actual_user_nickname") or from_user_nickname
 
-    # handle_message_process.send_wx_img_base64(data["msg"], to_user_id)
+    content_data = {        
+        **data,
+        "isgroup": True,
+        "msg": data["msg"],
+    }
 
     proc = PluginsFuncProc(_config)
     # proc.runTask(True, data["msg"])
-    proc.runTask(to_user_id, True, data["msg"])
+    proc.runTask(to_user_id, isGroup=True, text=data["msg"],other_dict=content_data)
 
     return web.json_response(
-        {"actual_user_id": to_user_id, "actual_user_nickname": to_user_nickname, **data}
+        {"actual_user_id": actual_user_id, "actual_user_nickname": actual_user_nickname, **data}
     )
 
 
