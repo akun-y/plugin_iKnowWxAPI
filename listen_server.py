@@ -9,6 +9,7 @@ from bridge.reply import Reply, ReplyType
 from common.log import logger
 
 from plugins.plugin_iKnowWxAPI.find_plugins_func import PluginsFuncProc
+from plugins.plugin_iKnowWxAPI.invite_user import handle_invite_user_to_group
 from plugins.plugin_iKnowWxAPI.message_proc import MessageProc
 from plugins.plugin_iKnowWxAPI.rsa_crypto import RsaCode, load_pubkey_file
 from plugins.plugin_iKnowWxAPI.update_ai_setting import handle_update_ai_setting
@@ -214,6 +215,7 @@ async def init():
 
 
 async def setup():
+    global handle_message_process
     app = web.Application()
 
     app.router.add_get("/", handle)
@@ -226,6 +228,8 @@ async def setup():
     app.router.add_post("/send/plugins", handle_send_plugins)
 
     app.router.add_post("/update/ai/setting", handle_update_ai_setting)
+    app.router.add_post("/invite/user/to/group", handle_invite_user_to_group_with_process)
+
     server_fs = []
     single = web.AppRunner(app)
     await single.setup()
@@ -246,7 +250,7 @@ def start_aiohttp():
     loop.run_forever()
 
 
-def listen_server(config, channel):
+def listen_server(config, channel, handlers_msg):
     global handle_message_process, _config
     # 延迟5秒，让初始化任务执行完
     time.sleep(5)
@@ -270,3 +274,7 @@ def listen_server(config, channel):
     # handle_message_process = MessageProc(channel)
     # logging.info("server_run2:", config['port'])
     # web.run_app(app, host='0.0.0.0', port=config['port'])
+
+
+async def handle_invite_user_to_group_with_process(request):
+    return await handle_invite_user_to_group(request, handle_message_process)

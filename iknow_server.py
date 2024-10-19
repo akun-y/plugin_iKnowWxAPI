@@ -7,6 +7,7 @@ from bridge.reply import Reply, ReplyType
 from channel.chat_message import ChatMessage
 
 from plugins import *
+from plugins.plugin_comm.message import CommMessage
 from plugins.plugin_iKnowWxAPI.listen_server import listen_server
 from plugins.plugin_iKnowWxAPI.sync_contracts_rooms import SyncContactsRooms
 from plugins.plugin_iKnowWxAPI.update_ai_setting import thread_refresh_ai_config
@@ -33,6 +34,7 @@ class iKnowServerAPI(Plugin):
             self.port = self.config.get("port")
 
         self.channel = None
+        self.handlers_msg = CommMessage()
 
         self._start_listen_task(self.channel)
         self._start_ai_setting_refresh_task()
@@ -47,6 +49,7 @@ class iKnowServerAPI(Plugin):
             kwargs={
                 "config": self.config,
                 "channel": channel,
+                "handlers_msg": self.handlers_msg,
             },
         )
         t.setDaemon(True)
