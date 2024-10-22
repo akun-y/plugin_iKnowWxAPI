@@ -5,14 +5,7 @@ from common.log import logger
 from config import conf, get_root
 from plugins.plugin_comm.api.api_groupx import ApiGroupx
 from plugins.plugin_comm.json_file import load_json_from_file, save_json_to_file
-from plugins.plugin_comm.plugin_comm import EthZero
-
-
-class GroupxContact(TypedDict):
-    account: str  # groupx 账号
-    alias: str  # 真实微信号
-    wxid: str  # wcferry 微信ID
-    name: str  # 微信昵称
+from plugins.plugin_comm.plugin_comm import EthZero, GroupxContact
 
 
 class SyncContactsRooms(object):
