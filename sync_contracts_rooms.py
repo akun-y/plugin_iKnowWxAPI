@@ -103,7 +103,7 @@ class SyncContactsRooms(object):
         if len(friends) < step:
             # 全部好友都发送完成了
             self.postFriendsPos = 0
-            logger.info(f"好友列表发送完成,共{len(self.contacts)}个好友")
+            logger.warning(f"======>好友列表发送完成,共{len(self.contacts)}个好友")
             save_json_to_file(
                 self.directory, self.contacts_groupx, "groupx_contacts.json"
             )
@@ -136,7 +136,7 @@ class SyncContactsRooms(object):
         self.postGroupsPos += step
         if len(chatrooms) < step:
             self.postGroupsPos = 0
-            logger.info(f"群列表已发送完成,共:{len(self.rooms)}")
+            logger.warning(f"======>群列表已发送完成,共:{len(self.rooms)}")
         else:
             # 每隔20秒执行一次,直到群列表全部发送完成
             threading.Timer(17.0, self.postGroups2Groupx).start()
