@@ -134,7 +134,7 @@ async def handle_send_msg_groups(request):
     if not keys.issubset(data):
         logger.error("handle_send_msg_groups 缺少参数 {}".format(data))
         return _resp_error("参数不完整")
-    logger.info("_rsa_verify:{}".format(data))
+    logger.info("_rsa_verify:{}".format(data.get("user","无用户")))
     # 验证签名
     msgData = data["msg"]
     if not _rsa_verify(
