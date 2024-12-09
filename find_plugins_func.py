@@ -15,6 +15,7 @@ import io
 import time
 import gc
 from channel import channel_factory
+from plugins.plugin_comm.dot_dict import DotDict
 
 
 # 通过输入指令，确定是否有插件能够处理该指令，如有则调用并将调用结果返回。
@@ -83,7 +84,7 @@ class PluginsFuncProc(object):
         content_dict["session_id"] = to_user_id
         content_dict = {**content_dict, **other_dict}
 
-        msg: ChatMessage = ChatMessage(content_dict)
+        msg: ChatMessage = ChatMessage(DotDict(content_dict))
         # 信息映射
         for key, value in content_dict.items():
             if hasattr(msg, key):
