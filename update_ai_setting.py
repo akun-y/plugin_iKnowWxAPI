@@ -15,12 +15,18 @@ async def handle_update_ai_setting(request):
 
     keys = {"character_desc", "mode_name", "agent"}
     if not keys.issubset(data):
-        return _resp_error("参数不完整")
-    logger.info("_rsa_verify:{}".format(data))
+        err_msg = "handle_update_ai_setting 参数不完整"
+        logger.error(err_msg)
+        return _resp_error(err_msg)
+    
     # 验证签名
-    if not _rsa_verify(data["character_desc"], data["sign"], data["user"]):
-        logger.error("handle_update_ai_setting 签名验证失败")
-        return web.HTTPBadRequest(text="数据包验证失败")
+    debug = conf().get("debug") == True
+    if not debug:
+        logger.info("_rsa_verify:{}".format(data))
+        if not _rsa_verify(data["character_desc"], data["sign"], data["user"]):
+            err_msg = "handle_update_ai_setting 签名验证失败"
+            logger.error(err_msg)
+            return web.HTTPBadRequest(text=err_msg)
     desc = conf().get("character_desc")
 
     load_config()
@@ -45,14 +51,14 @@ def thread_refresh_ai_config():
         if groupx.is_login():
             res = groupx.get_ai_setting()
             if res and res["code"] == 200:
-                logger.info(f"获取AI 配置信息成功:{res}")
+                logger.info(f"获取AI 配置信息成功:\n agent:{res['data']['agent']} \n modelName:{res['data']['modelName']}")
                 desc = res["data"]["description"]
                 if desc:
                     desc = conf()["character_desc"] = desc
                     bot = Bridge().get_bot("chat")
                     bot.sessions.clear_all_session()
                     Bridge().reset_bot()
-                    logger.warn(f"======> AI配置更新成功....{desc}")
+                    logger.warn(f"======> AI配置更新成功....{desc[0:96]}")
             else:
                 logger.error(f"======>获取AI配置失败 {res}")
             break

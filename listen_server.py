@@ -8,6 +8,7 @@ from aiohttp import web
 from bridge.reply import Reply, ReplyType
 from common.log import logger
 
+from config import conf
 from plugins.plugin_iKnowWxAPI.find_plugins_func import PluginsFuncProc
 from plugins.plugin_iKnowWxAPI.invite_user import handle_invite_user_to_group
 from plugins.plugin_iKnowWxAPI.message_proc import MessageProc
@@ -29,9 +30,12 @@ async def handle_send_url(request):
         logger.error("handle_send_url 缺少参数 {}".format(data))
         return _resp_error("参数不完整")
     # 验证签名
-    if not _rsa_verify(data["msg"], data["sign"], data["user"]):
-        logger.error("handle_send_url 签名验证失败")
-        return _resp_error("签名验证失败")
+    debug = conf().get("debug") == True
+    if not debug:
+        if not _rsa_verify(data["msg"], data["sign"], data["user"]):
+            err_msg = "handle_send_url 签名验证失败"
+            logger.error(err_msg)
+            return _resp_error(err_msg)
     file_name = data.get("filename", "")
 
     to_user_id = data["to_user_id"]
@@ -61,11 +65,16 @@ async def handle_file(request):
 
     keys = {"user", "sign", "msg", "to_user_id", "file"}
     if not keys.issubset(data):
-        return _resp_error("参数不完整")
+        err_msg = "handle_file 参数不完整"
+        logger.error(err_msg)
+        return _resp_error(err_msg)
     # 验证签名
-    if not _rsa_verify(data["msg"], data["sign"], data["user"]):
-        logger.error("handle_file 签名验证失败")
-        return _resp_error("签名验证失败")
+    debug = conf().get("debug") == True
+    if not debug:
+        if not _rsa_verify(data["msg"], data["sign"], data["user"]):
+            err_msg = "handle_file 签名验证失败"
+            logger.error(err_msg)
+            return _resp_error(err_msg)
 
     to_user_id = data.get("to_user_id")
     to_user_nickname = data.get("to_user_nickname")
@@ -99,11 +108,15 @@ async def handle_send_msg(request):
     keys = {"user", "msg", "to_user_id", "to_user_nickname"}
     if not keys.issubset(data):
         return _resp_error("参数不完整")
-    logger.info("_rsa_verify:{}".format(data))
+    
     # 验证签名
-    if not _rsa_verify(data["msg"], data["sign"], data["user"]):
-        logger.error("handle_send_msg 签名验证失败")
-        return web.HTTPBadRequest(text="数据包验证失败")
+    debug = conf().get("debug") == True
+    if not debug:
+        logger.info("_rsa_verify:{}".format(data))
+        if not _rsa_verify(data["msg"], data["sign"], data["user"]):
+            err_msg = "handle_send_msg 签名验证失败"
+            logger.error(err_msg)
+            return web.HTTPBadRequest(text=err_msg)
 
     to_user_id = data["to_user_id"]
     to_user_nickname = data["to_user_nickname"]
@@ -176,12 +189,18 @@ async def handle_send_plugins(request):
 
     keys = {"user", "msg", "to_user_id", "to_user_nickname"}
     if not keys.issubset(data):
-        return _resp_error("参数不完整")
-    logger.info("_rsa_verify:{}".format(data))
+        err_msg = "handle_send_plugins 参数不完整"
+        logger.error(err_msg)
+        return _resp_error(err_msg)
+    
     # 验证签名
-    # if not _rsa_verify(data["msg"], data["sign"], data["user"]):
-    #     logger.error("handle_send_plugins 签名验证失败")
-    #     return web.HTTPBadRequest(text="数据包验证失败")
+    debug = conf().get("debug") == True
+    if not debug:
+        logger.info("_rsa_verify:{}".format(data))
+        if not _rsa_verify(data["msg"], data["sign"], data["user"]):
+            err_msg = "handle_send_plugins 签名验证失败"
+            logger.error(err_msg)
+            return web.HTTPBadRequest(text=err_msg)
 
     to_user_id = data.get("to_user_id")
     to_user_nickname = data.get("to_user_nickname")

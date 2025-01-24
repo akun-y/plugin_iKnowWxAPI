@@ -1,4 +1,5 @@
 import os
+from config import conf
 from plugins.plugin_iKnowWxAPI.rsa_crypto import RsaCode, load_pubkey_file
 from aiohttp import web
 from common.log import logger
@@ -11,12 +12,18 @@ async def handle_update_ai_setting(request):
 
     keys = {"character_desc"}
     if not keys.issubset(data):
-        return _resp_error("参数不完整")
-    logger.info("_rsa_verify:{}".format(data))
+        err_msg = "handle_update_ai_setting 参数不完整"
+        logger.error(err_msg)
+        return _resp_error(err_msg)
+    
     # 验证签名
-    if not _rsa_verify(data["msg"], data["sign"], data["user"]):
-        logger.error("handle_update_ai_setting 签名验证失败")
-        return web.HTTPBadRequest(text="数据包验证失败")
+    debug = conf().get("debug") == True
+    if not debug:
+        logger.info("_rsa_verify:{}".format(data))
+        if not _rsa_verify(data["msg"], data["sign"], data["user"]):
+            err_msg = "handle_update_ai_setting 签名验证失败"
+            logger.error(err_msg)
+            return web.HTTPBadRequest(text=err_msg)
 
     return web.json_response(
         {
