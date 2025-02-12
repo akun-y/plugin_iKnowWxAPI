@@ -67,7 +67,7 @@ class MessageProc(object):
             context = Context(ContextType.IMAGE, url, content_dict)
             return self.send_use_custom(url, ReplyType.IMAGE_URL, context)
         if type in ["微信链接"]:
-            context = Context(ContextType.IMAGE, url, content_dict)
+            context = Context(ContextType.MP_LINK, url, content_dict)
             return self.send_use_custom(url, ReplyType.LINK, context)
         elif type == "视频":
             context = Context(ContextType.VIDEO, url, content_dict)
