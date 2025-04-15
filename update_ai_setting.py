@@ -65,4 +65,4 @@ def thread_refresh_ai_config():
         else:
             logger.warn("======>[iKnowWxAPI] 等待groupx登录成功...")
             groupx.post_login()
-            time.sleep(3)
+            time.sleep(12)
