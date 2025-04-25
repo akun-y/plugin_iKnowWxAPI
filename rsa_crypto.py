@@ -3,7 +3,6 @@
 # Author: Akun.yunqi
 
 import base64
-import os
 from Crypto.Signature import pkcs1_15  # 用于签名/验签
 from Crypto.Cipher import PKCS1_v1_5  # 用于加密
 from Crypto.Hash import SHA256

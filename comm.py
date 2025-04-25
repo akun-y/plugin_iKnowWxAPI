@@ -33,7 +33,7 @@ async def handle_update_ai_setting(request):
         }
     )
 
-_pubkeys = {}
+_pubkeys: dict[str, str] = {}
 # 根据用户名从配置中读取公钥
 def get_pubkey(user):
     global _pubkeys

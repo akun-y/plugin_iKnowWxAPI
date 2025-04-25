@@ -1,20 +1,16 @@
 import asyncio
-import os
 import time
 
 import arrow
 from aiohttp import web
 
-from bridge.reply import Reply, ReplyType
 from common.log import logger
-
 from config import conf
+from plugins.plugin_iKnowWxAPI.comm import _resp_error, _resp_ok, _rsa_verify
 from plugins.plugin_iKnowWxAPI.find_plugins_func import PluginsFuncProc
 from plugins.plugin_iKnowWxAPI.invite_user import handle_invite_user_to_group
 from plugins.plugin_iKnowWxAPI.message_proc import MessageProc
-from plugins.plugin_iKnowWxAPI.rsa_crypto import RsaCode, load_pubkey_file
 from plugins.plugin_iKnowWxAPI.update_ai_setting import handle_update_ai_setting
-from plugins.plugin_iKnowWxAPI.comm import _resp_error, _resp_ok, _rsa_verify
 
 
 async def handle(request):
@@ -222,10 +218,6 @@ async def handle_send_plugins(request):
     return web.json_response(
         {"actual_user_id": actual_user_id, "actual_user_nickname": actual_user_nickname, **data}
     )
-
-
-async def handle(request):
-    return web.Response(text="Hello, World!")
 
 
 async def init():
