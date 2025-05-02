@@ -1,5 +1,4 @@
 # encoding:utf-8
-from channel.wcferry.wcferry_channel import WcFerryChannel
 import plugins
 from bridge.context import ContextType, Context
 from bridge.reply import Reply, ReplyType
@@ -23,7 +22,8 @@ class PluginsFuncProc(object):
     def __init__(self, _config):
         super().__init__()
         self.conf = _config
-        self.channel = WcFerryChannel()
+        channel_name = RobotConfig.conf().get("channel_type", "wx")
+        self.channel = channel_factory.create_channel(channel_name)
 
     # 使用默认的回复
     def replay_use_default(self, reply_message, e_context: EventContext):
