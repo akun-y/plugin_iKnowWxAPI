@@ -104,7 +104,7 @@ async def handle_send_msg(request):
     keys = {"user", "msg", "to_user_id", "to_user_nickname"}
     if not keys.issubset(data):
         return _resp_error("参数不完整")
-    
+
     # 验证签名
     debug = conf().get("debug") == True
     if not debug:
@@ -188,7 +188,7 @@ async def handle_send_plugins(request):
         err_msg = "handle_send_plugins 参数不完整"
         logger.error(err_msg)
         return _resp_error(err_msg)
-    
+
     # 验证签名
     debug = conf().get("debug") == True
     if not debug:
@@ -205,7 +205,7 @@ async def handle_send_plugins(request):
     actual_user_id = data.get("actual_user_id") or from_user_id
     actual_user_nickname = data.get("actual_user_nickname") or from_user_nickname
 
-    content_data = {        
+    content_data = {
         **data,
         "isgroup": True,
         "msg": data["msg"],
@@ -226,7 +226,7 @@ async def init():
 
 
 async def setup():
-    global handle_message_process
+    global handle_message_process, _config
     app = web.Application()
 
     app.router.add_get("/", handle)
@@ -244,11 +244,8 @@ async def setup():
     server_fs = []
     single = web.AppRunner(app)
     await single.setup()
-    server_fs.append(web.TCPSite(single, port=9092).start())
-
-    double = web.AppRunner(app)
-    await double.setup()
-    server_fs.append(web.TCPSite(double, host="localhost", port=9093).start())
+    port = _config.get("port", 9092)  # Get port from config, default to 9092 if not specified
+    server_fs.append(web.TCPSite(single, port=port).start())
 
     return asyncio.ensure_future(asyncio.gather(*server_fs))
 
@@ -256,8 +253,8 @@ async def setup():
 def start_aiohttp():
     loop = asyncio.get_event_loop()
     loop.set_debug(True)
-    srv = loop.run_until_complete(setup())
-    logger.info(f"server runing on... {srv}")
+    srv = loop.run_until_complete(setup())    
+    logger.info(f"[iKnowWxAPI] 监听启动成功!")    
     loop.run_forever()
 
 
@@ -268,8 +265,9 @@ def listen_server(config, channel, handlers_msg):
 
     _config = config
     handle_message_process = MessageProc(channel)
-
-    logger.warn("=====>server_run:{}".format(config["port"]))
+    logger.info("========================================")
+    logger.warn("=====>[iKnowWxAPI] 监听端口:{}".format(config["port"]))
+    logger.info("========================================")
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
@@ -277,15 +275,8 @@ def listen_server(config, channel, handlers_msg):
 
     while True:
         start_aiohttp()
-        logger.error("=====>server_run:{}".format(config["port"]))
-        time.sleep(25)
-    # while True:
-    #     time.sleep(1.1)
-
-    # handle_message_process = MessageProc(channel)
-    # logging.info("server_run2:", config['port'])
-    # web.run_app(app, host='0.0.0.0', port=config['port'])
-
+        logger.error("=====>s[iKnowWxAPI] 监听失败,端口:{}".format(config["port"]))
+        time.sleep(0.2)
 
 async def handle_invite_user_to_group_with_process(request):
     return await handle_invite_user_to_group(request, handle_message_process)

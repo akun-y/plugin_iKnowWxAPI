@@ -51,14 +51,14 @@ def thread_refresh_ai_config():
         if groupx.is_login():
             res = groupx.get_ai_setting()
             if res and res["code"] == 200:
-                logger.info(f"获取AI 配置信息成功:\n agent:{res['data']['agent']} \n modelName:{res['data']['modelName']}")
+                logger.info(f"获取AI配置信息成功:\n agent:{res['data']['agent']} \n modelName:{res['data']['modelName']}")
                 desc = res["data"]["description"]
                 if desc:
                     desc = conf()["character_desc"] = desc
                     bot = Bridge().get_bot("chat")
                     bot.sessions.clear_all_session()
                     Bridge().reset_bot()
-                    logger.warn(f"======> AI配置更新成功....{desc[0:96]}")
+                    logger.warn(f"======> AI配置更新成功,共{len(desc)}字符....\n{desc[0:96]}...")
             else:
                 logger.error(f"======>获取AI配置失败 {res}")
             break
