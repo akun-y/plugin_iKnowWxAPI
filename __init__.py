@@ -1,1 +1,1 @@
-from .iknow_server import *
+from .iknow_server import iKnowServerAPI

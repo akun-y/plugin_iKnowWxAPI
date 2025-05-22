@@ -5,8 +5,8 @@ from common.log import logger
 from config import conf, get_root
 from plugins.plugin_comm.api.api_groupx import ApiGroupx
 from plugins.plugin_comm.json_file import load_json_from_file, save_json_to_file
-from plugins.plugin_comm.plugin_comm import EthZero
-from plugins.plugin_comm.groupx.groupx_users_man import GroupxContact,GroupxUserMan
+from plugins.plugin_comm.constants import EthZero
+from plugins.plugin_comm.groupx.groupx_users_man import ContactFromSrv,GroupxUserMan
 
 class SyncContactsRooms(object):
     def __init__(self, rooms, contracts):

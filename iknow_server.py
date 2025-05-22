@@ -1,6 +1,7 @@
 # encoding:utf-8
 
 import threading
+from typing import Dict, Any, Optional
 import plugins
 from bridge.context import ContextType
 from bridge.reply import Reply, ReplyType
@@ -25,13 +26,13 @@ class iKnowServerAPI(Plugin):
     def __init__(self):
         super().__init__()
         self.handlers[Event.ON_HANDLE_CONTEXT] = self.on_handle_context
-        self.path = os.path.dirname(__file__)
-        self.config = super().load_config()
+        self.path: str = os.path.dirname(__file__)
+        self.config: Dict[str, Any] = super().load_config()
         if not self.config:
             # 未加载到配置，使用模板中的配置
             self.config = self._load_config_template()
         if self.config:
-            self.port = self.config.get("port")
+            self.port: int = self.config.get("port")
 
         self.channel = None
         self.handlers_msg = CommMessage()
