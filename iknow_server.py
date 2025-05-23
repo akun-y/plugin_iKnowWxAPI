@@ -40,7 +40,7 @@ class iKnowServerAPI(Plugin):
         self._start_listen_task(self.channel)
         self._start_ai_setting_refresh_task()
         
-        logger.info(f"======>[iKnowWxAPI] inited")
+        logger.warn(f"======>[iKnowWxAPI] inited")
 
     #启动监听服务,默认监听9092,用于发送微信消息
     def _start_listen_task(self, channel):
