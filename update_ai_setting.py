@@ -63,6 +63,6 @@ def thread_refresh_ai_config():
                 logger.error(f"======>获取AI配置失败 {res}")
             break
         else:
-            logger.warn("======>[iKnowWxAPI] 等待groupx登录成功...")
+            logger.warn("======>[iKnowWxAPI] groupx中...")
             groupx.post_login()
             time.sleep(12)
