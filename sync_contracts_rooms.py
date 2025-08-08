@@ -30,9 +30,8 @@ class SyncContactsRooms(object):
                     "City": vvv.get("city"),
                     "Sex": 1 if vvv.get("gender") == "男" else 0,
                     "Province": vvv.get("province"),
-                    "NickName": vvv.get("name")
-                    or vvv.get("nickname")
-                    or vvv.get("display_name"),
+                    "NickName": vvv.get("name") or vvv.get("nickname") or vvv.get("display_name"),
+                    "HeadImgUrl": value.get("avatar"),
                     "UserName": kkk,
                 }
                 m_list.append(m)
@@ -57,7 +56,6 @@ class SyncContactsRooms(object):
                 "Province": value.get("province"),
                 "NickName": value.get("name"),
                 "HeadImgUrl": value.get("avatar"),
-                "avatar": value.get("avatar"),
                 "UserName": key,
             }
             for key, value in contracts.items()
