@@ -16,7 +16,7 @@ class SyncContactsRooms(object):
         self.groupx_user_man = GroupxUserMan()
         
         self.rooms = []
-        # 使用列表推导式转换字典为列表
+        # 只针对 wcferry_rooms.json 文件
         for key, value in rooms.items():
             m_list = []
             member_list = value.get("member_list", [])
@@ -45,7 +45,7 @@ class SyncContactsRooms(object):
             }
             self.rooms.append(item)
             # rooms[key] = {"member_list": value.get("member_list")}
-
+        #只针对 wcferry_contacts.json 文件
         self.contacts = [
             {
                 "wxid": key,
@@ -56,6 +56,8 @@ class SyncContactsRooms(object):
                 "Sex": 1 if value.get("gender") == "男" else 0,
                 "Province": value.get("province"),
                 "NickName": value.get("name"),
+                "HeadImgUrl": value.get("avatar"),
+                "avatar": value.get("avatar"),
                 "UserName": key,
             }
             for key, value in contracts.items()
