@@ -143,6 +143,18 @@ class MessageProc(object):
         file_name = self.save_file_to_local(file, ext_name)
         # itchat.send_video(file_name, to_user_id)
 
+    def send_wx_file_local(self, to_user_id, file, ext_name, display_name="file"):
+        file_path = self.save_file_to_local(file, ext_name)
+        content_dict = {
+            "content": display_name,
+            "receiver": to_user_id,
+            "session_id": to_user_id,
+            "isgroup": False,
+        }
+        content_dict["msg"] = ChatMessage(content_dict)
+        context = Context(ContextType.FILE, display_name, content_dict)
+        return self.send_use_custom(file_path, ReplyType.FILE, context)
+
     # 使用默认的回复,仅支持文本
     def send_use_default(self, reply_message, e_context: EventContext):
         # 回复内容

@@ -55,7 +55,6 @@ async def handle_send_url(request):
 
 # 支持通过POST form-data方式上传文件
 
-
 async def handle_file(request):
     data = await request.post()
 
@@ -90,7 +89,14 @@ async def handle_file(request):
             )
             return _resp_ok("图片上传成功")
         else:
-            return _resp_error("不支持的文件格式")
+            # 通用文件（含 pdf、word、zip 等，在 image/video 能力之外扩展）
+            handle_message_process.send_wx_file_local(
+                to_user_id,
+                upload_file.file.file,
+                ext_name,
+                upload_file.filename,
+            )
+            return _resp_ok("文件上传成功")
     else:
         return _resp_error("没有上传文件")
 
