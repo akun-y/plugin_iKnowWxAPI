@@ -123,10 +123,21 @@ async def handle_send_msg(request):
     to_user_id = data["to_user_id"]
     to_user_nickname = data["to_user_nickname"]
 
-    msg_type = data["type"].upper()
+    msg_type = data.get("type", "TEXT").upper()
+    msg_content = data["msg"]
     if msg_type == "IMAGE":
-        logger.info("send image:{} - {}".format(to_user_id, len(data["msg"])))
-        handle_message_process.send_wx_img_base64(data["msg"], to_user_id)
+        if msg_content.startswith("http"):
+            logger.info("send image url:{} - {}".format(to_user_id, msg_content))
+            handle_message_process.send_wx_url("图片", msg_content, to_user_id)
+        else:
+            logger.info("send image:{} - {}".format(to_user_id, len(msg_content)))
+            handle_message_process.send_wx_img_base64(msg_content, to_user_id)
+    elif msg_type in ("IMAGE_URL", "IMAGEURL"):
+        logger.info("send image url:{} - {}".format(to_user_id, data["msg"]))
+        handle_message_process.send_wx_url("图片", data["msg"], to_user_id)
+    elif msg_type in ("VIDEO_URL", "VIDEOURL"):
+        logger.info("send video url:{} - {}".format(to_user_id, data["msg"]))
+        handle_message_process.send_wx_url("视频", data["msg"], to_user_id)
     elif msg_type == "WX_LINK":
         logger.info("send text:{}-{}".format(data["msg"], to_user_id))
         handle_message_process.send_wx_url("微信链接", data["msg"], to_user_id)
@@ -174,8 +185,13 @@ async def handle_send_msg_groups(request):
             handle_message_process.send_wx_url("视频", msgData["content"], groupId)
 
         elif msg_type == "IMAGE":
-            logger.info("send image:{} - {}".format(groupId, len(data["msg"])))
-            handle_message_process.send_wx_img_base64(data["msg"], groupId)
+            image_content = data.get("msg") or msgData.get("content", "")
+            if image_content.startswith("http"):
+                logger.info("send image url:{} - {}".format(groupId, image_content))
+                handle_message_process.send_wx_url("图片", image_content, groupId)
+            else:
+                logger.info("send image:{} - {}".format(groupId, len(image_content)))
+                handle_message_process.send_wx_img_base64(image_content, groupId)
         else:
             logger.info("send text:{}-{}".format(data["msg"], groupId))
             handle_message_process.send_wx_text(msgData["content"], groupId)

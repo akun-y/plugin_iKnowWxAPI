@@ -1,4 +1,5 @@
 import base64
+import os
 from hashlib import md5
 import hashlib
 import uuid
@@ -44,42 +45,100 @@ class MessageProc(object):
         self.send_use_custom(content, ReplyType.TEXT, context)
        # itchat.set_pinned(to_user_id, True)
 
-    def send_wx_url(self, type, url, to_user_id, file_name="x"):
-        keys = {"图片", "视频", "文件", "月图片", "公开月图片","微信链接"}
+    def _normalize_url_type(self, media_type):
+        """将前端历史 type 值归一化为 send_wx_url 识别的中文类型。"""
+        if not media_type:
+            return "图片"
+        media_type = str(media_type).strip()
+        aliases = {
+            "image_url": "图片",
+            "imageurl": "图片",
+            "image": "图片",
+            "video_url": "视频",
+            "videourl": "视频",
+            "video": "视频",
+            "file": "文件",
+            "wx_link": "微信链接",
+            "wxlink": "微信链接",
+        }
+        return aliases.get(media_type.lower(), media_type)
 
-        if not type in keys:
+    def _build_url_context(self, url, to_user_id):
+        content_dict = {
+            "content": url,
+            "receiver": to_user_id,
+            "session_id": to_user_id,
+            "isgroup": False,
+        }
+        content_dict["msg"] = ChatMessage(content_dict)
+        return content_dict
+
+    def _send_image_url(self, url, to_user_id):
+        """优先下载后发本地图片；失败时回退旧的 IMAGE_URL 通道。"""
+        try:
+            ext_name = self._guess_ext_from_url(url, "jpg")
+            file_path = self.save_url_to_local(url, str(uuid.uuid4()), ext_name)
+            if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                return self._send_local_media(
+                    to_user_id, file_path, ReplyType.IMAGE, ContextType.IMAGE, url
+                )
+        except Exception as e:
+            logger.warn(f"[WX] 下载图片失败，回退 IMAGE_URL: {e}")
+
+        content_dict = self._build_url_context(url, to_user_id)
+        context = Context(ContextType.IMAGE, url, content_dict)
+        return self.send_use_custom(url, ReplyType.IMAGE_URL, context)
+
+    def _send_video_url(self, url, to_user_id):
+        """优先下载后发本地视频；失败时回退旧的 VIDEO_URL 通道。"""
+        try:
+            ext_name = self._guess_ext_from_url(url, "mp4")
+            file_path = self.save_url_to_local(url, str(uuid.uuid4()), ext_name)
+            if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+                return self._send_local_media(
+                    to_user_id, file_path, ReplyType.VIDEO, ContextType.VIDEO, url
+                )
+        except Exception as e:
+            logger.warn(f"[WX] 下载视频失败，回退 VIDEO_URL: {e}")
+
+        content_dict = self._build_url_context(url, to_user_id)
+        context = Context(ContextType.VIDEO, url, content_dict)
+        return self.send_use_custom(url, ReplyType.VIDEO_URL, context)
+
+    def _guess_ext_from_url(self, url, default="jpg"):
+        path = url.split("?", 1)[0]
+        ext_name = os.path.splitext(path)[1].lstrip(".").lower()
+        if ext_name in ("jpg", "jpeg", "png", "gif", "webp", "bmp"):
+            return "jpg" if ext_name == "jpeg" else ext_name
+        return default
+
+    def send_wx_url(self, type, url, to_user_id, file_name="x"):
+        type = self._normalize_url_type(type)
+        keys = {"图片", "视频", "文件", "月图片", "公开月图片", "微信链接"}
+
+        if type not in keys:
             logger.error(f"不支持的URL类型{type},支持类型为: {keys}")
             return False
 
-        # 创建字典
-        content_dict = {"content": url}
-        # 添加必要key
-        content_dict["receiver"] = to_user_id
-        content_dict["session_id"] = to_user_id
-        content_dict["isgroup"] = False
-
-        content_dict["msg"] = ChatMessage(content_dict)
-
-        # itchat.set_pinned(to_user_id, True)
-
-        # 走代理的时候会无法发送
         if type in ["图片", "月图片", "公开月图片"]:
-            context = Context(ContextType.IMAGE, url, content_dict)
-            return self.send_use_custom(url, ReplyType.IMAGE_URL, context)
-        if type in ["微信链接"]:
+            return self._send_image_url(url, to_user_id)
+        if type == "微信链接":
+            content_dict = self._build_url_context(url, to_user_id)
             context = Context(ContextType.MP_LINK, url, content_dict)
             return self.send_use_custom(url, ReplyType.LINK, context)
-        elif type == "视频":
-            context = Context(ContextType.VIDEO, url, content_dict)
-            return self.send_use_custom(url, ReplyType.VIDEO_URL, context)
-        elif type == "文件":
+        if type == "视频":
+            return self._send_video_url(url, to_user_id)
+        if type == "文件":
             ext_name = os.path.splitext(file_name)[1]
             if len(ext_name) > 1:
                 ext_name = ext_name[1:]
+            if not ext_name:
+                ext_name = self._guess_ext_from_url(url, "bin")
 
-            file_path = self.save_url_to_local(url, file_name, ext_name)
+            save_name = file_name or "x"
+            file_path = self.save_url_to_local(url, save_name, ext_name)
+            content_dict = self._build_url_context(url, to_user_id)
             context = Context(ContextType.FILE, file_name, content_dict)
-
             return self.send_use_custom(file_path, ReplyType.FILE, context)
         return False
 
@@ -127,33 +186,63 @@ class MessageProc(object):
 
         return tmp_file
 
-    def send_wx_img_file(self, to_user_id, file, ext_name):
-        file_name = self.save_file_to_local(file, ext_name)
-        # itchat.send_image(file_name, to_user_id)
-
-    def send_wx_img_base64(self, content, to_user_id):
-        # 获取图片数据部分（去除"data:image/png;base64,"这部分）
-        image_data = content.split(",")[1]
-        image_binary = base64.b64decode(image_data)
-        file_name = self.save_metadata_to_file(image_binary, "jpg")
-
-        # itchat.send_image(file_name, to_user_id)
-
-    def send_wx_video(self, to_user_id, file, ext_name):
-        file_name = self.save_file_to_local(file, ext_name)
-        # itchat.send_video(file_name, to_user_id)
-
-    def send_wx_file_local(self, to_user_id, file, ext_name, display_name="file"):
-        file_path = self.save_file_to_local(file, ext_name)
+    def _send_local_media(
+        self, to_user_id, file_path, reply_type, context_type, context_content=None
+    ):
+        context_content = context_content or file_path
         content_dict = {
-            "content": display_name,
+            "content": context_content,
             "receiver": to_user_id,
             "session_id": to_user_id,
             "isgroup": False,
         }
         content_dict["msg"] = ChatMessage(content_dict)
-        context = Context(ContextType.FILE, display_name, content_dict)
-        return self.send_use_custom(file_path, ReplyType.FILE, context)
+        context = Context(context_type, context_content, content_dict)
+        return self.send_use_custom(file_path, reply_type, context)
+
+    def send_wx_img_file(self, to_user_id, file, ext_name):
+        file_path = self.save_file_to_local(file, ext_name)
+        return self._send_local_media(
+            to_user_id, file_path, ReplyType.IMAGE, ContextType.IMAGE
+        )
+
+    def send_wx_img_base64(self, content, to_user_id):
+        header, _, image_data = content.partition(",")
+        if not image_data:
+            image_data = content
+        image_binary = base64.b64decode(image_data)
+        ext_name = "jpg"
+        if header.startswith("data:image/"):
+            mime = header.split(";")[0].split("/")[-1].lower()
+            if mime == "png":
+                ext_name = "png"
+            elif mime in ("jpeg", "jpg"):
+                ext_name = "jpg"
+            elif mime in ("gif", "webp"):
+                ext_name = mime
+        file_path = self.save_metadata_to_file(image_binary, ext_name)
+        return self._send_local_media(
+            to_user_id, file_path, ReplyType.IMAGE, ContextType.IMAGE
+        )
+
+    def send_wx_video(self, to_user_id, file, ext_name):
+        file_path = self.save_file_to_local(file, ext_name)
+        return self._send_local_media(
+            to_user_id, file_path, ReplyType.VIDEO, ContextType.VIDEO
+        )
+
+    def send_wx_file_local(self, to_user_id, file, ext_name, display_name="file"):
+        if isinstance(file, str):
+            file_path = file
+        else:
+            file_path = self.save_file_to_local(file, ext_name)
+        return self._send_local_media(
+            to_user_id,
+            file_path,
+            ReplyType.FILE,
+            ContextType.FILE,
+            display_name,
+        )
 
     # 使用默认的回复,仅支持文本
     def send_use_default(self, reply_message, e_context: EventContext):
