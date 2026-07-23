@@ -185,7 +185,11 @@ async def handle_send_msg_groups(request):
             handle_message_process.send_wx_url("视频", msgData["content"], groupId)
 
         elif msg_type == "IMAGE":
-            image_content = data.get("msg") or msgData.get("content", "")
+            # APF /send/groups 约定：msg={type,content}，验签用 type+content；发图只用 content 字符串
+            image_content = msgData.get("content") if isinstance(msgData, dict) else data.get("msg")
+            if not isinstance(image_content, str) or not image_content:
+                logger.error("handle_send_msg_groups IMAGE 缺少 content: {}".format(type(msgData)))
+                continue
             if image_content.startswith("http"):
                 logger.info("send image url:{} - {}".format(groupId, image_content))
                 handle_message_process.send_wx_url("图片", image_content, groupId)
