@@ -45,8 +45,10 @@ async def handle_update_ai_setting(request):
 
 def thread_refresh_ai_config():
     time.sleep(12)
-    logger.warn("刷新AI配置")
     groupx = ApiGroupx()
+    if not groupx.cow_token:
+        return
+    logger.warn("刷新AI配置")
     while True:
         if groupx.is_login():
             res = groupx.get_ai_setting()
