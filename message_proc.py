@@ -259,6 +259,14 @@ class MessageProc(object):
     def send_use_custom(
         self, reply_text: str, replyType: ReplyType, context: Context, retry_cnt=0
     ):
+        receiver = ""
+        try:
+            receiver = (context or {}).get("receiver") or (context or {}).get("session_id") or ""
+        except Exception:
+            receiver = ""
+        preview = (reply_text or "").replace("\n", "\\n")
+        if len(preview) > 80:
+            preview = preview[:80] + "..."
         try:
             reply = Reply(replyType, reply_text)
             channel_name = RobotConfig.conf().get("channel_type", "wx")
@@ -270,9 +278,14 @@ class MessageProc(object):
             gc.collect()
             return True
         except Exception as e:
-            logger.error(e)
+            logger.exception(
+                f"[send_use_custom] 发送失败 retry={retry_cnt} type={replyType} "
+                f"receiver={receiver} preview={preview} error={e}"
+            )
             if retry_cnt < 2:
-                logger.warn("重试发送 send_use_custom")
+                logger.warning(
+                    f"[send_use_custom] 重试发送 retry={retry_cnt + 1} receiver={receiver}"
+                )
                 time.sleep(3 + 3 * retry_cnt)
-                self.send_use_custom(reply_text, replyType, context, retry_cnt + 1)
+                return self.send_use_custom(reply_text, replyType, context, retry_cnt + 1)
             return False
